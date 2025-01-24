@@ -19,8 +19,8 @@ class AzureMLChatbot:
         Initialize Azure ML inference endpoint chatbot
         """
         # Configuration
-        self.url = 'https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score'
-        self.api_key = 'CsSaJ6GYCy9H2XKb3hK43IYrddBl8WHS'
+        self.url = 'https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score'
+        self.api_key = 'tBGuiknYLuYK503TTnFO0uaPRt9mm1yc'
         
         # Enable self-signed HTTPS if needed
         allowSelfSignedHttps(True)
