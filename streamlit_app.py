@@ -4,8 +4,8 @@ import streamlit as st
 from datetime import datetime
 
 # Azure OpenAI Service 설정
-AZURE_OPENAI_ENDPOINT = "https://rniaiproject4657409409.openai.azure.com"
-AZURE_OPENAI_KEY = "EjEL2MlZ70BhFT2tyVloS624wLLXT8krtmv9EJu08hIdrR2AHZw5JQQJ99BAACHYHv6XJ3w3AAAAACOGWY3C"
+AZURE_OPENAI_ENDPOINT = "https://APSWC-DEV-AI-OpenAI.openai.azure.com/openai/deployments/gpt-4-1106/chat/completions?api-version=2024-08-01-preview"
+AZURE_OPENAI_KEY = "19ec7b7f1bec46dd91be16c92941a733"
 DEPLOYMENT_NAME = "gpt-4-1106"
 API_VERSION = "2024-02-15-preview"
 
