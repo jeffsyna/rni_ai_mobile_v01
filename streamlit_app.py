@@ -1,40 +1,97 @@
 import requests
+import json
+import streamlit as st
+from datetime import datetime
 
-AZURE_OPENAI_ENDPOINT = "https://rniaiproject4657409409.openai.azure.com"
-AZURE_OPENAI_KEY = "EjEL2MlZ70BhFT2tyVloS624wLLXT8krtmv9EJu08hIdrR2AHZw5JQQJ99BAACHYHv6XJ3w3AAAAACOGWY3C"
+# Azure OpenAI Service 설정
+AZURE_OPENAI_ENDPOINT = "https://APSWC-DEV-AI-OpenAI.openai.azure.com"
+AZURE_OPENAI_KEY = "19ec7b7f1bec46dd91be16c92941a733"
+DEPLOYMENT_NAME = "gpt-4-1106"
+API_VERSION = "2024-08-01-preview"
 
-def list_deployments():
-    headers = {
-        'api-key': AZURE_OPENAI_KEY
-    }
-    
+def get_ai_response(user_input):
     try:
-        # 다른 API 버전으로 시도
-        api_versions = ["2023-12-01-preview", "2023-05-15", "2024-02-15-preview"]
+        # Azure OpenAI Service 호출
+        headers = {
+            'Content-Type': 'application/json',
+            'api-key': AZURE_OPENAI_KEY
+        }
         
-        for version in api_versions:
-            print(f"\nTrying API version: {version}")
-            response = requests.get(
-                f"{AZURE_OPENAI_ENDPOINT}/openai/deployments?api-version={version}",
-                headers=headers
-            )
+        data = {
+            "messages": [
+                {"role": "system", "content": "You are a helpful AI assistant."},
+                {"role": "user", "content": user_input}
+            ],
+            "temperature": 0.7,
+            "max_tokens": 800
+        }
+        
+        # URL 구조 수정
+        api_url = f"{AZURE_OPENAI_ENDPOINT}/openai/deployments/{DEPLOYMENT_NAME}/chat/completions?api-version={API_VERSION}"
+        print(f"Calling API URL: {api_url}")
+        print(f"Request Headers: {headers}")
+        print(f"Request Data: {json.dumps(data, ensure_ascii=False)}")
+        
+        response = requests.post(
+            api_url,
+            headers=headers,
+            json=data,
+            verify=True
+        )
+        
+        print(f"Response Status: {response.status_code}")
+        print(f"Response Headers: {dict(response.headers)}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            return response.json()['choices'][0]['message']['content']
+        else:
+            error_message = f"Error: {response.status_code}"
+            try:
+                error_detail = response.json()
+                error_message += f" - {json.dumps(error_detail, ensure_ascii=False)}"
+            except:
+                error_message += f" - {response.text}"
+            return error_message
             
-            print(f"Status Code: {response.status_code}")
-            print(f"Response: {response.text}")
-            
-            if response.status_code == 200:
-                deployments = response.json()
-                print("\nDeployed Models:")
-                print("-" * 50)
-                for deployment in deployments.get('data', []):
-                    print(f"Deployment Name: {deployment.get('id')}")
-                    print(f"Model: {deployment.get('model')}")
-                    print(f"Status: {deployment.get('status')}")
-                    print("-" * 50)
-                break
-            
-    except Exception as e:
-        print(f"Error: {str(e)}")
+    except requests.exceptions.RequestException as e:
+        return f"Error: {str(e)}"
 
-if __name__ == "__main__":
-    list_deployments() 
+# Streamlit UI 구성
+st.title("RNI AI Assistant")
+st.write("AI 어시스턴트와 대화를 시작해보세요!")
+
+# 채팅 히스토리 초기화
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
+
+# 이전 메시지 표시
+for message in st.session_state.chat_history:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+# 사용자 입력 처리
+if 'user_input' not in st.session_state:
+    st.session_state.user_input = ""
+
+# 채팅 입력 폼 생성
+with st.form(key="chat_form", clear_on_submit=True):
+    user_input = st.text_input("메시지를 입력하세요:", key="input_field")
+    submit_button = st.form_submit_button("전송")
+
+    if submit_button and user_input:
+        # 사용자 메시지 표시
+        with st.chat_message("user"):
+            st.write(user_input)
+        st.session_state.chat_history.append({"role": "user", "content": user_input})
+        
+        # AI 응답 받기
+        response = get_ai_response(user_input)
+        
+        # AI 응답 표시
+        with st.chat_message("assistant"):
+            st.write(response)
+        st.session_state.chat_history.append({"role": "assistant", "content": response})
+        
+        # 페이지 새로고침
+        st.rerun()
