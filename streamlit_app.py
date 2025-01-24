@@ -89,7 +89,7 @@ def main():
 
     # 디버깅 정보 표시
     st.sidebar.title("디버깅 정보")
-    st.sidebar.write("Inference URL: https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score")
+    st.sidebar.write("Inference URL: https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score")
     st.sidebar.write("API Key 존재 여부: 있음")
 
     # Initialize chatbot and session state
