@@ -9,22 +9,29 @@ def list_deployments():
     }
     
     try:
-        response = requests.get(
-            f"{AZURE_OPENAI_ENDPOINT}/openai/deployments?api-version=2023-05-15",
-            headers=headers
-        )
+        # 다른 API 버전으로 시도
+        api_versions = ["2023-12-01-preview", "2023-05-15", "2024-02-15-preview"]
         
-        if response.status_code == 200:
-            deployments = response.json()
-            print("\nDeployed Models:")
-            print("-" * 50)
-            for deployment in deployments['data']:
-                print(f"Deployment Name: {deployment['id']}")
-                print(f"Model: {deployment['model']}")
-                print(f"Status: {deployment['status']}")
+        for version in api_versions:
+            print(f"\nTrying API version: {version}")
+            response = requests.get(
+                f"{AZURE_OPENAI_ENDPOINT}/openai/deployments?api-version={version}",
+                headers=headers
+            )
+            
+            print(f"Status Code: {response.status_code}")
+            print(f"Response: {response.text}")
+            
+            if response.status_code == 200:
+                deployments = response.json()
+                print("\nDeployed Models:")
                 print("-" * 50)
-        else:
-            print(f"Error: {response.status_code} - {response.text}")
+                for deployment in deployments.get('data', []):
+                    print(f"Deployment Name: {deployment.get('id')}")
+                    print(f"Model: {deployment.get('model')}")
+                    print(f"Status: {deployment.get('status')}")
+                    print("-" * 50)
+                break
             
     except Exception as e:
         print(f"Error: {str(e)}")
