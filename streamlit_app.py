@@ -18,8 +18,8 @@ class AzureMLChatbot:
         Initialize Azure ML inference endpoint chatbot
         """
         # Configuration
-        self.url = os.environ.get('AZURE_ML_INFERENCE_URL', 'https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score')
-        self.api_key = os.environ.get('AZURE_ML_API_KEY', 'CsSaJ6GYCy9H2XKb3hK43IYrddBl8WHS')
+        self.url = 'https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score'
+        self.api_key = 'tBGuiknYLuYK503TTnFO0uaPRt9mm1yc'
         
         # Enable self-signed HTTPS if needed
         allowSelfSignedHttps(True)
@@ -40,7 +40,10 @@ class AzureMLChatbot:
         try:
             # Prepare request data
             data = {
-                "input": user_input  # 입력 키 확인 및 조정
+                "data": {
+                    "message": user_input,
+                    "timestamp": st.session_state.get('timestamp', '')
+                }
             }
             body = str.encode(json.dumps(data))
 
@@ -58,7 +61,7 @@ class AzureMLChatbot:
                 result = response.read().decode('utf-8')
                 print(f"Raw response: {result}")  # 응답 로깅
                 
-                # JSON 파싱 및 응답 추출 로직 개선
+                # JSON 파싱 및 응답 추출
                 try:
                     parsed_result = json.loads(result)
                     return parsed_result.get('output', 'No response received')
@@ -86,8 +89,8 @@ def main():
 
     # 디버깅 정보 표시
     st.sidebar.title("디버깅 정보")
-    st.sidebar.write(f"Inference URL: {os.environ.get('AZURE_ML_INFERENCE_URL', '없음')}")
-    st.sidebar.write(f"API Key 존재 여부: {'있음' if os.environ.get('AZURE_ML_API_KEY') else '없음'}")
+    st.sidebar.write("Inference URL: https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score")
+    st.sidebar.write("API Key 존재 여부: 있음")
 
     # Initialize chatbot and session state
     try:
@@ -110,20 +113,23 @@ def main():
         submit_button = st.form_submit_button("전송")
         
         if submit_button and user_input:
-            # User message
-            with st.chat_message("user"):
-                st.write(user_input)
-            st.session_state.chat_history.append({"role": "user", "content": user_input})
-            
-            # AI response
-            response = chatbot.get_ai_response(user_input)
-            
-            # Assistant message
-            with st.chat_message("assistant"):
-                st.write(response)
-            st.session_state.chat_history.append({"role": "assistant", "content": response})
-            
-            st.rerun()
+            try:
+                # User message
+                with st.chat_message("user"):
+                    st.write(user_input)
+                st.session_state.chat_history.append({"role": "user", "content": user_input})
+                
+                # AI response
+                response = chatbot.get_ai_response(user_input)
+                
+                # Assistant message
+                with st.chat_message("assistant"):
+                    st.write(response)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                
+                st.rerun()
+            except Exception as chat_error:
+                st.error(f"대화 처리 중 오류 발생: {str(chat_error)}")
 
 if __name__ == "__main__":
     main()
