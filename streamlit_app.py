@@ -3,7 +3,7 @@ import json
 import ssl
 import urllib.request
 import streamlit as st
-from dotenv import load_dotenv
+import traceback
 
 def allowSelfSignedHttps(allowed):
     """
@@ -17,11 +17,9 @@ class AzureMLChatbot:
         """
         Initialize Azure ML inference endpoint chatbot
         """
-        load_dotenv()
-        
         # Configuration
-        self.url = os.getenv('AZURE_ML_INFERENCE_URL', 'https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score')
-        self.api_key = os.getenv('AZURE_ML_API_KEY', 'CsSaJ6GYCy9H2XKb3hK43IYrddBl8WHS')
+        self.url = os.environ.get('AZURE_ML_INFERENCE_URL', 'https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score')
+        self.api_key = os.environ.get('AZURE_ML_API_KEY', 'CsSaJ6GYCy9H2XKb3hK43IYrddBl8WHS')
         
         # Enable self-signed HTTPS if needed
         allowSelfSignedHttps(True)
@@ -42,7 +40,7 @@ class AzureMLChatbot:
         try:
             # Prepare request data
             data = {
-                "input_text": user_input
+                "input": user_input  # 입력 키 확인 및 조정
             }
             body = str.encode(json.dumps(data))
 
@@ -58,25 +56,45 @@ class AzureMLChatbot:
             # Send request
             with urllib.request.urlopen(req) as response:
                 result = response.read().decode('utf-8')
-                return json.loads(result).get('output_text', 'No response received')
+                print(f"Raw response: {result}")  # 응답 로깅
+                
+                # JSON 파싱 및 응답 추출 로직 개선
+                try:
+                    parsed_result = json.loads(result)
+                    return parsed_result.get('output', 'No response received')
+                except json.JSONDecodeError:
+                    return f"JSON 디코딩 오류: {result}"
 
         except urllib.error.HTTPError as error:
-            error_message = f"Request failed with status code: {error.code}\n"
-            error_message += f"Error details: {error.read().decode('utf-8')}"
+            error_message = f"요청 실패 - 상태 코드: {error.code}\n"
+            error_message += f"오류 세부 정보: {error.read().decode('utf-8')}"
+            print(error_message)
             return error_message
         except Exception as e:
-            return f"An error occurred: {str(e)}"
+            error_trace = traceback.format_exc()
+            print(f"예외 발생: {str(e)}")
+            print(f"트레이스백: {error_trace}")
+            return f"오류 발생: {str(e)}"
 
 def main():
     """
     Streamlit application for interactive Azure ML chatbot
     """
     st.set_page_config(page_title="RNI AI Assistant", page_icon="🤖")
-    st.title("R&I AI Assistant with Azure ML")
+    st.title("RNI AI Assistant with Azure ML")
     st.write("AI 어시스턴트와 대화를 시작해보세요!")
 
+    # 디버깅 정보 표시
+    st.sidebar.title("디버깅 정보")
+    st.sidebar.write(f"Inference URL: {os.environ.get('AZURE_ML_INFERENCE_URL', '없음')}")
+    st.sidebar.write(f"API Key 존재 여부: {'있음' if os.environ.get('AZURE_ML_API_KEY') else '없음'}")
+
     # Initialize chatbot and session state
-    chatbot = AzureMLChatbot()
+    try:
+        chatbot = AzureMLChatbot()
+    except Exception as init_error:
+        st.error(f"챗봇 초기화 오류: {str(init_error)}")
+        return
     
     if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
