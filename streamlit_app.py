@@ -19,7 +19,7 @@ class AzureMLChatbot:
         """
         # Configuration
         self.url = 'https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score'
-        self.api_key = ''  # API 키를 여기에 입력하세요
+        self.api_key = 'tBGuiknYLuYK503TTnFO0uaPRt9mm1yc'
         self.deployment_name = 'ai-sol-prompthon-vwdxk-1'
         
         # Enable self-signed HTTPS if needed
