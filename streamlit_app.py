@@ -4,7 +4,6 @@ import ssl
 import urllib.request
 import streamlit as st
 import traceback
-from datetime import datetime
 
 def allowSelfSignedHttps(allowed):
     """
@@ -20,13 +19,14 @@ class AzureMLChatbot:
         """
         # Configuration
         self.url = 'https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score'
-        self.api_key = 'tBGuiknYLuYK503TTnFO0uaPRt9mm1yc'
+        self.api_key = ''  # API 키를 여기에 입력하세요
+        self.deployment_name = 'ai-sol-prompthon-vwdxk-1'
         
         # Enable self-signed HTTPS if needed
         allowSelfSignedHttps(True)
         
         if not self.api_key:
-            raise ValueError("Azure ML API key is required")
+            raise ValueError("API key is required")
 
     def get_ai_response(self, user_input: str) -> str:
         """
@@ -41,7 +41,9 @@ class AzureMLChatbot:
         try:
             # Prepare request data
             data = {
-                "input": user_input
+                "messages": [
+                    {"role": "user", "content": user_input}
+                ]
             }
             
             print(f"Request data: {json.dumps(data, ensure_ascii=False)}")  # 요청 데이터 로깅
@@ -49,8 +51,9 @@ class AzureMLChatbot:
 
             # Prepare headers
             headers = {
-                'Content-Type': 'application/json', 
-                'Authorization': f'Bearer {self.api_key}'
+                'Content-Type': 'application/json',
+                'Authorization': f'Bearer {self.api_key}',
+                'azureml-model-deployment': self.deployment_name
             }
 
             # Create request
@@ -64,10 +67,7 @@ class AzureMLChatbot:
                 # JSON 파싱 및 응답 추출
                 try:
                     parsed_result = json.loads(result)
-                    if isinstance(parsed_result, dict) and 'chat_output' in parsed_result:
-                        return parsed_result['chat_output']
-                    else:
-                        return str(parsed_result)
+                    return str(parsed_result)
                 except json.JSONDecodeError:
                     return f"JSON 디코딩 오류: {result}"
 
@@ -86,18 +86,28 @@ def main():
     """
     Streamlit application for interactive Azure ML chatbot
     """
-    st.set_page_config(page_title="RNI AI Assistant", page_icon="🤖")
-    st.title("RNI AI Assistant with Azure ML")
+    st.set_page_config(page_title="AI Solution Prompthon", page_icon="🤖")
+    st.title("AI Solution Prompthon Assistant")
     st.write("AI 어시스턴트와 대화를 시작해보세요!")
 
     # 디버깅 정보 표시
     st.sidebar.title("디버깅 정보")
-    st.sidebar.write("Inference URL: https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score")
-    st.sidebar.write("API Key 존재 여부: 있음")
+    st.sidebar.write("Inference URL: https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score")
+    st.sidebar.write("Deployment: ai-sol-prompthon-vwdxk-1")
+
+    # API 키 입력
+    if 'api_key' not in st.session_state:
+        st.sidebar.title("API 키 설정")
+        api_key = st.sidebar.text_input("API Key", type="password")
+        if st.sidebar.button("설정 저장"):
+            st.session_state.api_key = api_key
+            st.rerun()
 
     # Initialize chatbot and session state
     try:
         chatbot = AzureMLChatbot()
+        if 'api_key' in st.session_state:
+            chatbot.api_key = st.session_state.api_key
     except Exception as init_error:
         st.error(f"챗봇 초기화 오류: {str(init_error)}")
         return
