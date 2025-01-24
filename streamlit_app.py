@@ -7,7 +7,7 @@ from datetime import datetime
 AZURE_OPENAI_ENDPOINT = "https://APSWC-DEV-AI-OpenAI.openai.azure.com/openai/deployments/gpt-4-1106/chat/completions?api-version=2024-08-01-preview"
 AZURE_OPENAI_KEY = "19ec7b7f1bec46dd91be16c92941a733"
 DEPLOYMENT_NAME = "gpt-4-1106"
-API_VERSION = "2024-02-15-preview"
+API_VERSION = "2024-08-01-preview"
 
 # Azure AI Foundry 프롬프트 흐름 설정
 PROMPT_FLOW_ENDPOINT = "https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score"
