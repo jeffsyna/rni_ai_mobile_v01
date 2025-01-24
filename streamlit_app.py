@@ -4,6 +4,7 @@ import ssl
 import urllib.request
 import streamlit as st
 import traceback
+from datetime import datetime
 
 def allowSelfSignedHttps(allowed):
     """
@@ -18,8 +19,8 @@ class AzureMLChatbot:
         Initialize Azure ML inference endpoint chatbot
         """
         # Configuration
-        self.url = 'https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score'
-        self.api_key = 'tBGuiknYLuYK503TTnFO0uaPRt9mm1yc'
+        self.url = 'https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score'
+        self.api_key = 'CsSaJ6GYCy9H2XKb3hK43IYrddBl8WHS'
         
         # Enable self-signed HTTPS if needed
         allowSelfSignedHttps(True)
@@ -40,11 +41,17 @@ class AzureMLChatbot:
         try:
             # Prepare request data
             data = {
-                "data": {
-                    "message": user_input,
-                    "timestamp": st.session_state.get('timestamp', '')
+                "input_data": {
+                    "input_string": user_input,
+                    "parameters": {
+                        "temperature": 0.7,
+                        "max_tokens": 800
+                    },
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 }
             }
+            
+            print(f"Request data: {json.dumps(data, ensure_ascii=False)}")  # 요청 데이터 로깅
             body = str.encode(json.dumps(data))
 
             # Prepare headers
@@ -64,7 +71,18 @@ class AzureMLChatbot:
                 # JSON 파싱 및 응답 추출
                 try:
                     parsed_result = json.loads(result)
-                    return parsed_result.get('output', 'No response received')
+                    if isinstance(parsed_result, dict):
+                        # 다양한 응답 구조 처리
+                        if 'output' in parsed_result:
+                            return parsed_result['output']
+                        elif 'response' in parsed_result:
+                            return parsed_result['response']
+                        elif 'result' in parsed_result:
+                            return parsed_result['result']
+                        else:
+                            return str(parsed_result)
+                    else:
+                        return str(parsed_result)
                 except json.JSONDecodeError:
                     return f"JSON 디코딩 오류: {result}"
 
@@ -89,7 +107,7 @@ def main():
 
     # 디버깅 정보 표시
     st.sidebar.title("디버깅 정보")
-    st.sidebar.write("Inference URL: https://ai-sol-prompthon-vwdxk.eastus2.inference.ml.azure.com/score")
+    st.sidebar.write("Inference URL: https://rni-ai-assistance-lhlbq.eastus2.inference.ml.azure.com/score")
     st.sidebar.write("API Key 존재 여부: 있음")
 
     # Initialize chatbot and session state
