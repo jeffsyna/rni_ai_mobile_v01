@@ -139,25 +139,56 @@ def main():
     st.markdown("""
         <div style='background-color: #ebf5fb; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
         <h3 style='color: #2874a6;'>💡 TIP</h3>
-        <p>질의 전 반드시 아래 탭에서 일반 질문인지 제품기획인지 선택해주세요. 제품기획은 제품 기획안 작성만 대답 가능합니다.</p>
+        <p>질의 전 반드시 아래 탭에서 일반 질문인지 제품기획인지 선택해주세요. 제품기획은 "제품기획안" 작성만 가능합니다.</p>
         </div>
         """, unsafe_allow_html=True)
     
-    # Query type selection
-    col1, col2 = st.columns(2)
-    with col1:
-        general_selected = st.button("일반 질문", use_container_width=True, 
-            help="일반적인 문의사항에 대해 질문하실 수 있습니다.")
-    with col2:
-        product_selected = st.button("제품 기획", use_container_width=True,
-            help="제품 기획과 관련된 문의사항에 대해 질문하실 수 있습니다.")
+    # Display chat history
+    for message in st.session_state.chat_history:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
     
-    # Store selected type in session state
-    if general_selected:
-        st.session_state.query_type = "general"
-    elif product_selected:
-        st.session_state.query_type = "product"
-    
+    # Chat container
+    chat_container = st.container()
+    with chat_container:
+        # Query type tabs
+        tab1, tab2 = st.tabs(["일반 질문", "제품 기획"])
+        
+        with tab1:
+            if st.tab_selected():
+                st.session_state.query_type = "general"
+                user_input = st.chat_input(
+                    "일반적인 문의사항에 대해 질문해주세요:",
+                    key="general_input"
+                )
+        
+        with tab2:
+            if st.tab_selected():
+                st.session_state.query_type = "product"
+                user_input = st.chat_input(
+                    "제품 기획과 관련된 문의사항에 대해 질문해주세요:",
+                    key="product_input"
+                )
+        
+        if user_input and 'api_key' in st.session_state:
+            try:
+                # Display user message
+                with st.chat_message("user"):
+                    st.write(user_input)
+                st.session_state.chat_history.append({"role": "user", "content": user_input})
+                
+                # Get and display AI response
+                response = get_ai_response(user_input, st.session_state.api_key, st.session_state.query_type)
+                
+                with st.chat_message("assistant"):
+                    st.write(response)
+                st.session_state.chat_history.append({"role": "assistant", "content": response})
+                
+            except Exception as e:
+                st.error(f"오류 발생: {str(e)}")
+        elif user_input and not 'api_key' in st.session_state:
+            st.warning("API 키를 먼저 설정해주세요.")
+
     # Sidebar for API key
     with st.sidebar:
         st.title("설정")
@@ -166,47 +197,6 @@ def main():
             if st.button("설정 저장"):
                 st.session_state.api_key = api_key
                 st.rerun()
-    
-    # Initialize chat history
-    if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
-    
-    # Display chat history
-    for message in st.session_state.chat_history:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-    
-    # Chat input
-    if 'query_type' in st.session_state:
-        with st.form(key="chat_form", clear_on_submit=True):
-            user_input = st.text_input(
-                "메시지를 입력하세요:",
-                key="input_field",
-                placeholder=f"{'일반 질문' if st.session_state.query_type == 'general' else '제품 기획'} 모드에서 질문하실 수 있습니다."
-            )
-            submit_button = st.form_submit_button("전송")
-            
-            if submit_button and user_input and 'api_key' in st.session_state:
-                try:
-                    # Display user message
-                    with st.chat_message("user"):
-                        st.write(user_input)
-                    st.session_state.chat_history.append({"role": "user", "content": user_input})
-                    
-                    # Get and display AI response
-                    response = get_ai_response(user_input, st.session_state.api_key, st.session_state.query_type)
-                    
-                    with st.chat_message("assistant"):
-                        st.write(response)
-                    st.session_state.chat_history.append({"role": "assistant", "content": response})
-                    
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"오류 발생: {str(e)}")
-            elif submit_button and not 'api_key' in st.session_state:
-                st.warning("API 키를 먼저 설정해주세요.")
-    else:
-        st.info("위의 '일반 질문' 또는 '제품 기획' 버튼을 클릭하여 질문 유형을 선택해주세요.")
 
 if __name__ == "__main__":
     main()
