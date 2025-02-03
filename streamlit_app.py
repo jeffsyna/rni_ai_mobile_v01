@@ -124,7 +124,7 @@ def main():
     # Title with custom styling
     st.markdown("""
         <h1 style='text-align: center; color: #2e4053;'>R&I AI assistance</h1>
-        <p style='text-align: center; color: #566573;'>제품 기획 도우미</p>
+        <p style='text-align: center; color: #566573;'>제품 기획 도우미 by NSY</p>
         """, unsafe_allow_html=True)
     
     # Notice section
@@ -139,7 +139,7 @@ def main():
     st.markdown("""
         <div style='background-color: #ebf5fb; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
         <h3 style='color: #2874a6;'>💡 TIP</h3>
-        <p>질의 전 반드시 아래 탭에서 일반 질문인지 제품기획인지 선택해주세요.</p>
+        <p>질의 전 반드시 아래 탭에서 일반 질문인지 제품기획인지 선택해주세요. 제품기획은 제품 기획안 작성만 대답 가능합니다.</p>
         </div>
         """, unsafe_allow_html=True)
     
