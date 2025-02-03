@@ -121,6 +121,10 @@ def main():
     # Page config
     st.set_page_config(page_title="R&I AI assistance", page_icon="🤖", layout="wide")
     
+    # Initialize session state
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
     # Title with custom styling
     st.markdown("""
         <h1 style='text-align: center; color: #2e4053;'>R&I AI assistance</h1>
@@ -139,9 +143,18 @@ def main():
     st.markdown("""
         <div style='background-color: #ebf5fb; padding: 15px; border-radius: 5px; margin-bottom: 20px;'>
         <h3 style='color: #2874a6;'>💡 TIP</h3>
-        <p>질의 전 반드시 아래 탭에서 일반 질문인지 제품기획인지 선택해주세요. 제품기획은 "제품기획안" 작성만 가능합니다.</p>
+        <p>질의 전 반드시 아래 탭에서 일반 질문인지 제품기획인지 선택해주세요.</p>
         </div>
         """, unsafe_allow_html=True)
+    
+    # Sidebar for API key
+    with st.sidebar:
+        st.title("설정")
+        if 'api_key' not in st.session_state:
+            api_key = st.text_input("API Key", type="password")
+            if st.button("설정 저장"):
+                st.session_state.api_key = api_key
+                st.rerun()
     
     # Display chat history
     for message in st.session_state.chat_history:
@@ -188,15 +201,6 @@ def main():
                 st.error(f"오류 발생: {str(e)}")
         elif user_input and not 'api_key' in st.session_state:
             st.warning("API 키를 먼저 설정해주세요.")
-
-    # Sidebar for API key
-    with st.sidebar:
-        st.title("설정")
-        if 'api_key' not in st.session_state:
-            api_key = st.text_input("API Key", type="password")
-            if st.button("설정 저장"):
-                st.session_state.api_key = api_key
-                st.rerun()
 
 if __name__ == "__main__":
     main()
