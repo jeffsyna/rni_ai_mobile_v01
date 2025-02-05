@@ -37,56 +37,27 @@ Exfoliation:
 
 Whitening:
 - Niacinamide PC (code: 6000029, content: 2%)
-- 트라넥사민산 (code: 6006650, content: 0.5%)
-- Whitegen EX (code: 6008784, content: 0.01%)
-- 삼백초추출물 (code: 6016434, content: 0.0001%)
-- Ascorbic Acid Fine powder (code: 6018508, content: 0.7812%)
-- New 닥나무뿌리추출물 (code: 6018603, content: 0.1%)
-- COS-VCE-K (code: 6020206, content: 0.01%)
-- AgelyticS (code: 6026723, content: 0.005%)
+- 트라넥사민산(TRANEXAMIC ACID) (code: 6006650, content: 0.5%)
 [Additional whitening ingredients omitted for brevity]
 
 Moisturizing:
 - UREA(NEW) (code: 6006081, content: 1%)
 - Ceramide PC-104 (code: 6010270, content: 0.0002%)
-- Ceramide PC-102 (code: 6010271, content: 0.0002%)
-- Glyacid 70 HP (code: 6010544, content: 0.0001%)
-- Red Pine Needle (code: 6025370, content: 0.3%)
-- VERI-ENT MOISTURIZING WATER_10 (code: 6026185, content: 0.01%)
-- FERULIC ACID (code: 6026240, content: 0.01%)]
 [Additional moisturizing ingredients omitted for brevity]
 
 Pores/Sebum:
 - Houttuynia Powder (code: 6023106, content: 0.1%)
 - Jade Sphere (code: 6023814, content: 0.01%)
-- JM-MUD (code: 6023897, content: 0.1%)
-- Volcanic Sphere (code: 6025074, content: 0.01%)
-- JEJU VOLCANIC ASH 2 (code: 6025600, content: 0.01%)
-- SALICYLIC ACID (code: 6000362, content: 0.4%)
 [Additional pore/sebum ingredients omitted for brevity]
 
 Wrinkles/Elasticity:
 - L-ARGININE (code: 6005767, content: 0.0012%)
-- New EGCG-200 (code: 6026318, content: 1%)
-- HumaColl21® 2% Solution (code: 6026333, content: 0.02%)
-- Adenosine (code: 6026519, content: 0.02%)
-- CAMELLIA F (code: 6026553, content: 0.0001%)
-- LactoPDRN (code: 6026575, content: 0.6%)
-- SUPER COLLAGEN (code: 6026648, content: 0.0025%)
-- AgeRefect (code: 6026649, content: 0.0003%)
-- CYLASPHERE RETINOL 10S (code: 6026656, content: 0.0005%)
-- CO2LLAGENEER (code: 6026684, content: 0.1%)
-- Hi-Aqua™ FL (code: 6026745, content: 0.005%)
-- Green Tea Infusion (code: 6026750, content: 0.1%)
-- DOUBLE SQUEEZE GREEN TEA WATER (code: 6026848, content: 0.01%)]
+- New EGCG-200(5%) (code: 6026318, content: 1%)
 [Additional wrinkle/elasticity ingredients omitted for brevity]
 
 Soothing:
 - ORGANIC ALOE VERA EXTRACT D (code: 6019146, content: 1%)
 - JEJU GREEN CALMING COMPLEX (code: 6020894, content: 0.1%)
-- New AP sprout complex (code: 6024707, content: 0.1%)
-- Anasensyl-LS 9322 (code: 6024795, content: 0.01%)
-- MATRICARIA LIQUID EXTRACT (code: 6026065, content: 0.02%)]
 [Additional soothing ingredients omitted for brevity]
 
 When creating product plans, include:
