@@ -183,7 +183,7 @@ Based on this data, answer the following questions:
                         {"role": "user", "content": combined_input}
                     ],
                     "temperature": 0.7,
-                    "max_tokens": 4000,
+                    "max_completion_tokens": 4000,
                     "model": "o1-mini"
                 }
                 body = str.encode(json.dumps(data))
