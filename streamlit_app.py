@@ -245,7 +245,7 @@ def main():
     # Notice section
     st.markdown("""
         <div class='notice-box'>
-        <h3 style='color: #333333; margin-top: 0;'>⚠️ Notice</h3>
+        <h3 style='color: #333333; margin-top: 0;'>⚠️ VC with AI Notice</h3>
         <p style='color: #666666; margin-bottom: 0;'>AI 모델을 활용한 추론 기반으로 답변드리기 때문에 생성에 시간이 걸릴 수 있습니다.</p>
         </div>
         """, unsafe_allow_html=True)
