@@ -182,7 +182,6 @@ Based on this data, answer the following questions:
                         {"role": "system", "content": system_message},
                         {"role": "user", "content": combined_input}
                     ],
-                    "temperature": 0.7,
                     "max_completion_tokens": 4000,
                     "model": "o1-mini"
                 }
@@ -388,7 +387,7 @@ def main():
     st.markdown("""
         <div class='notice-box'>
         <h3 style='color: #333333; margin-top: 0;'>⚠️ Notice</h3>
-        <p style='color: #666666; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.<br>추론 모델을 활용하기 때문에 생성에 5분 정도 걸립니다.</p>
+        <p style='color: #666666; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.</p>
         </div>
         """, unsafe_allow_html=True)
     
