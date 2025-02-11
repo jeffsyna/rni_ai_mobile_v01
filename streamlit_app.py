@@ -154,6 +154,8 @@ def get_ai_response(user_input: str, api_key: str, crunchbase_api_key: str) -> s
                 # Set system message
                 system_message = """You are a professional VC investment analyst. Your task is to evaluate the investment potential of a startup using Crunchbase data.  
 
+Please use markdown formatting for tables and lists in your response, and avoid using unnecessary dividers or special characters.
+
 Analyze the following information and provide an investment assessment:  
 
 - **Company Overview**: {Company Name}, {Year Founded}, {Headquarters Location}, {Industry}  
@@ -386,8 +388,8 @@ def main():
     # Notice section
     st.markdown("""
         <div class='notice-box'>
-        <h3 style='color: #333333; margin-top: 0;'>⚠️ Notice</h3>
-        <p style='color: #666666; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.</p>
+        <h3 style='color: #333333; margin-top: 0;'>⚠️ VC with AI Notice</h3>
+        <p style='color: #666666; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.<br>추론 모델을 활용하기 때문에 생성에 5분 내외 시간이 소요 됩니다.</br></p>
         </div>
         """, unsafe_allow_html=True)
     
