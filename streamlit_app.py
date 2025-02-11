@@ -17,7 +17,7 @@ def get_ai_response(user_input: str, api_key: str) -> str:
     """
     Get AI response from the endpoint with retry logic
     """
-    max_retries = 5
+    max_retries = 5  # 최대 재시도 횟수 증가
     retry_delay = 2  # seconds
     
     try:
@@ -27,19 +27,21 @@ def get_ai_response(user_input: str, api_key: str) -> str:
                 allowSelfSignedHttps(True)
                 
                 # Prepare the request
-                url = 'https://DeepSeek-R1-sqlbu.eastus2.models.ai.azure.com/chat/completions'
-                api_version = '2024-02-15-preview'
+                url = 'https://aisolcopilot7010956395.openai.azure.com/openai/deployments/o1/chat/completions'
+                api_version = '2024-12-01-preview'
                 
                 # Set system message
                 system_message = """You are a professional VC investment analyst. Your task is to evaluate the investment potential of a startup.
 
-Based on the company name provided, analyze and answer the following questions:
+Please use markdown formatting for tables and lists in your response, and avoid using unnecessary dividers or special characters.
 
-1. **Business Model & Profitability Analysis**: What is the company's business model, and is it sustainable?
-2. **Competitive Advantage**: What differentiates this company from its competitors?
-3. **Market Opportunity**: Considering current market trends and growth potential, can this company scale successfully?
+Based on the company name provided, analyze and answer the following questions:  
+
+1. **Business Model & Profitability Analysis**: What is the company's business model, and is it sustainable?  
+2. **Competitive Advantage**: What differentiates this company from its competitors?  
+3. **Market Opportunity**: Considering current market trends and growth potential, can this company scale successfully?  
 4. **Risk Factors**: What are the key risks associated with this company?
-5. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?
+5. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?  
 
 *note : always response in Korean"""
                 
@@ -48,16 +50,15 @@ Based on the company name provided, analyze and answer the following questions:
                         {"role": "system", "content": system_message},
                         {"role": "user", "content": user_input}
                     ],
-                    "temperature": 0.7,
-                    "max_tokens": 2000,
-                    "model": "DeepSeek-R1-sqlbu"
+                    "max_completion_tokens": 4000,
+                    "model": "o1-mini"
                 }
                 body = str.encode(json.dumps(data))
                 
                 # Prepare headers
                 headers = {
                     'Content-Type': 'application/json',
-                    'Authorization': f'Bearer {api_key}'
+                    'api-key': api_key
                 }
                 
                 # Create and send request
@@ -229,10 +230,10 @@ def main():
         # Azure API Key input
         if 'api_key' not in st.session_state:
             api_key = st.text_input("Azure API Key", type="password")
-            if st.button("API 키 저장"):
+            if st.button("Azure API 키 저장"):
                 st.session_state.api_key = api_key
                 st.rerun()
-        
+                
         if 'api_key' in st.session_state:
             st.success("API 키가 설정되었습니다.")
             if st.button("API 키 재설정"):
