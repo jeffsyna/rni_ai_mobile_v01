@@ -3,6 +3,10 @@ import json
 import os
 import ssl
 import streamlit as st
+import time
+from urllib.error import HTTPError
+import requests
+from typing import Dict, Optional
 
 def allowSelfSignedHttps(allowed):
     """
@@ -11,115 +15,244 @@ def allowSelfSignedHttps(allowed):
     if allowed and not os.environ.get('PYTHONHTTPSVERIFY', '') and getattr(ssl, '_create_unverified_context', None):
         ssl._create_default_https_context = ssl._create_unverified_context
 
-def get_ai_response(user_input: str, api_key: str, query_type: str) -> str:
+def get_crunchbase_data(company_name: str, crunchbase_api_key: str) -> Optional[Dict]:
     """
-    Get AI response from the endpoint
+    Crunchbase API를 통해 회사 정보를 가져오는 함수
     """
+    base_url = "https://api.crunchbase.com/api/v4"
+    headers = {
+        "accept": "application/json",
+        "x-cb-user-key": crunchbase_api_key
+    }
+    
     try:
-        # Enable SSL bypass
-        allowSelfSignedHttps(True)
-        
-        # Prepare the request
-        url = 'https://APSWC-DEV-AI-OpenAI.openai.azure.com/openai/deployments/gpt-4o/chat/completions'
-        api_version = '2024-08-01-preview'
-        
-        # Set system message based on query type
-        if query_type == "general":
-            system_message = "You are a helpful AI assistant for R&I department. Please provide clear and concise answers in Korean to general questions about research and innovation."
-        else:  # product
-            system_message = """You are a specialized AI assistant for cosmetic product planning and development in R&I department. Please provide detailed guidance and professional insights in Korean about product planning, market analysis, and innovation strategies.
-
-For cosmetic product development, consider the following active ingredients and their contents:
-
-Exfoliation:
-- PURASAL SPF 60 (code: 6000285, content: 0.25%)
-- PINK PLUM VINEGAR (code: 6026077, content: 0.1%)
-
-Whitening:
-- Niacinamide PC (code: 6000029, content: 2%)
-- 트라넥사민산(TRANEXAMIC ACID) (code: 6006650, content: 0.5%)
-[Additional whitening ingredients omitted for brevity]
-
-Moisturizing:
-- UREA(NEW) (code: 6006081, content: 1%)
-- Ceramide PC-104 (code: 6010270, content: 0.0002%)
-[Additional moisturizing ingredients omitted for brevity]
-
-Pores/Sebum:
-- Houttuynia Powder (code: 6023106, content: 0.1%)
-- Jade Sphere (code: 6023814, content: 0.01%)
-[Additional pore/sebum ingredients omitted for brevity]
-
-Wrinkles/Elasticity:
-- L-ARGININE (code: 6005767, content: 0.0012%)
-- New EGCG-200(5%) (code: 6026318, content: 1%)
-[Additional wrinkle/elasticity ingredients omitted for brevity]
-
-Soothing:
-- ORGANIC ALOE VERA EXTRACT D (code: 6019146, content: 1%)
-- JEJU GREEN CALMING COMPLEX (code: 6020894, content: 0.1%)
-[Additional soothing ingredients omitted for brevity]
-
-When creating product plans, include:
-1. Product Name
-2. Product Concept
-3. Target Consumer (age/gender/lifestyle)
-4. Customer Pain Points
-5. Competitive Situation
-6. Key Ingredients and Features (with codes and contents)
-7. Product Formulation (table with codes, names, contents, functions)
-8. Design Concept
-9. Future Growth Potential
-10. Points to Improve
-11. Differentiation Strategy
-
-For formulations, follow these guidelines:
-- Toner: Purified water, moisturizer, efficacy ingredient, viscosity modifier
-- Lotion/Emulsion: Purified water, moisturizer, efficacy ingredient, emulsifier, viscosity modifier
-- Essence: Purified water, moisturizer, efficacy ingredient, viscosity modifier
-- Serum: Purified water, moisturizer, efficacy ingredient, emulsifier, viscosity modifier
-- Cream: Purified water, moisturizer, efficacy ingredient, emulsifier, emulsifying stabilizer, viscosity modifier
-
-Use at least two active ingredients from the provided list and adjust contents according to function."""
-        
-        # Prepare request data
-        data = {
-            "messages": [
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_input}
-            ],
-            "temperature": 0.7,
-            "max_tokens": 2000  # Increased for longer responses
-        }
-        body = str.encode(json.dumps(data))
-        
-        # Prepare headers
-        headers = {
-            'Content-Type': 'application/json',
-            'api-key': api_key
+        # 회사 검색
+        search_url = f"{base_url}/autocompletes"
+        params = {
+            "query": company_name,
+            "collection_types": "organizations",
+            "limit": 1
         }
         
-        # Create and send request
-        full_url = f"{url}?api-version={api_version}"
-        req = urllib.request.Request(full_url, body, headers)
+        response = requests.get(search_url, headers=headers, params=params)
+        response.raise_for_status()
+        search_data = response.json()
         
-        # Get response
-        with urllib.request.urlopen(req) as response:
-            result = response.read()
-            response_data = json.loads(result.decode('utf-8'))
-            return response_data['choices'][0]['message']['content']
+        if not search_data.get("entities"):
+            return None
             
-    except urllib.error.HTTPError as error:
-        error_message = f"요청 실패 - 상태 코드: {error.code}\n"
-        error_message += f"오류 정보: {error.info()}\n"
-        error_message += error.read().decode("utf8", 'ignore')
-        return error_message
+        # 회사 UUID 가져오기
+        org_uuid = search_data["entities"][0].get("identifier", {}).get("uuid")
+        if not org_uuid:
+            return None
+            
+        # 상세 정보 조회 (모든 필요한 정보를 한 번에 요청)
+        detail_url = f"{base_url}/entities/organizations/{org_uuid}"
+        params = {
+            "field_ids": [
+                "name", "short_description", "founded_on", "location_identifiers",
+                "funding_total", "operating_status", "categories", "company_type",
+                "revenue_range", "last_funding_type", "num_employees_enum",
+                "website", "linkedin", "twitter", "facebook",
+                "funding_rounds", "funding_rounds.announced_on",
+                "funding_rounds.money_raised", "funding_rounds.investment_type",
+                "funding_rounds.investors", "funding_rounds.investor_identifiers"
+            ]
+        }
+        
+        detail_response = requests.get(detail_url, headers=headers, params=params)
+        detail_response.raise_for_status()
+        company_data = detail_response.json()
+        
+        if not company_data:
+            return None
+            
+        return company_data
+        
+    except requests.exceptions.RequestException as e:
+        st.error(f"Crunchbase API 호출 중 오류 발생: {str(e)}")
+        return None
+
+def format_crunchbase_data(data: Dict) -> str:
+    """
+    Crunchbase API 데이터를 챗봇 시스템 메시지 형식으로 변환
+    """
+    if not data:
+        return "회사 정보를 찾을 수 없습니다."
+    
+    properties = data.get("properties", {})
+    
+    # 펀딩 라운드 정보 처리
+    funding_rounds = properties.get("funding_rounds", [])
+    latest_round = funding_rounds[0] if funding_rounds else {}
+    
+    # 투자자 정보 처리
+    investors = []
+    if latest_round:
+        investors = latest_round.get("investors", [])
+    
+    formatted_data = {
+        "Company Overview": {
+            "Company Name": properties.get("name", "N/A"),
+            "Year Founded": properties.get("founded_on", "N/A"),
+            "Location": properties.get("location_identifiers", [{}])[0].get("value", "N/A") if properties.get("location_identifiers") else "N/A",
+            "Industry": ", ".join([cat.get("value", "") for cat in properties.get("categories", [])]),
+            "Website": properties.get("website", {}).get("value", "N/A"),
+            "Description": properties.get("short_description", "N/A")
+        },
+        "Funding Details": {
+            "Stage": properties.get("last_funding_type", "N/A"),
+            "Total Amount": properties.get("funding_total", {}).get("value_usd", "N/A"),
+            "Latest Round": {
+                "Date": latest_round.get("announced_on", "N/A"),
+                "Type": latest_round.get("investment_type", "N/A"),
+                "Amount": latest_round.get("money_raised", {}).get("value_usd", "N/A")
+            },
+            "Key Investors": [inv.get("name", "") for inv in investors[:5]]
+        },
+        "Financial Data": {
+            "Revenue Range": properties.get("revenue_range", "N/A"),
+            "Employee Count": properties.get("num_employees_enum", "N/A"),
+            "Operating Status": properties.get("operating_status", "N/A")
+        },
+        "Social Media": {
+            "LinkedIn": properties.get("linkedin", {}).get("value", "N/A"),
+            "Twitter": properties.get("twitter", {}).get("value", "N/A"),
+            "Facebook": properties.get("facebook", {}).get("value", "N/A")
+        }
+    }
+    
+    return json.dumps(formatted_data, indent=2, ensure_ascii=False)
+
+def get_ai_response(user_input: str, api_key: str, crunchbase_api_key: str) -> str:
+    """
+    Get AI response from the endpoint with retry logic and Crunchbase data integration
+    """
+    max_retries = 5  # 최대 재시도 횟수 증가
+    retry_delay = 2  # seconds
+    
+    try:
+        # Crunchbase 데이터 조회
+        company_name = user_input.strip()
+        crunchbase_data = get_crunchbase_data(company_name, crunchbase_api_key)
+        if crunchbase_data is None:
+            return "회사 정보를 찾을 수 없습니다. 회사 이름을 다시 확인해주세요."
+            
+        formatted_data = format_crunchbase_data(crunchbase_data)
+        if formatted_data == "회사 정보를 찾을 수 없습니다.":
+            return formatted_data
+        
+        for attempt in range(max_retries):
+            try:
+                # Enable SSL bypass
+                allowSelfSignedHttps(True)
+                
+                # Prepare the request
+                url = 'https://DeepSeek-R1-sqlbu.eastus2.models.ai.azure.com/chat/completions'
+                api_version = '2024-02-15-preview'
+                
+                # Set system message
+                system_message = """You are a professional VC investment analyst. Your task is to evaluate the investment potential of a startup using Crunchbase data.  
+
+Analyze the following information and provide an investment assessment:  
+
+- **Company Overview**: {Company Name}, {Year Founded}, {Headquarters Location}, {Industry}  
+- **Funding Details**: {Funding Stage}, {Total Funding Amount}, {Key Investors}  
+- **Financial Data**: {Revenue Growth Rate}, {Profitability Metrics} (if available)  
+- **Competitive Landscape**: {List of Competitors}  
+- **Founders & Team**: {Founder Profiles}, {Key Team Members' Backgrounds}  
+- **Market Size & Growth Potential**: {Market Growth Rate}, {Key Trends}  
+- **Additional Factors**: {Patent Holdings}, {Partnerships}, {Recent Major News}  
+
+Based on this data, answer the following questions:  
+
+1. **Business Model & Profitability Analysis**: What is the company's business model, and is it sustainable?  
+2. **Competitive Advantage**: What differentiates this company from its competitors?  
+3. **Market Opportunity**: Considering current market trends and growth potential, can this company scale successfully?  
+4. **Risk Factors**: What are the key risks associated with this company? (e.g., legal challenges, profitability concerns, competitive pressure)  
+5. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?  
+
+*note : always response in Korean"""
+                
+                # Prepare request data with Crunchbase information
+                combined_input = f"Company: {company_name}\nCrunchbase Data:\n{formatted_data}\n\nUser Query: {user_input}"
+                
+                data = {
+                    "messages": [
+                        {"role": "system", "content": system_message},
+                        {"role": "user", "content": combined_input}
+                    ],
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                    "model": "DeepSeek-R1-sqlbu"
+                }
+                body = str.encode(json.dumps(data))
+                
+                # Prepare headers
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Authorization': f'Bearer {api_key}'
+                }
+                
+                # Create and send request
+                full_url = f"{url}?api-version={api_version}"
+                req = urllib.request.Request(full_url, body, headers)
+                
+                try:
+                    # Get response
+                    with urllib.request.urlopen(req) as response:
+                        result = response.read()
+                        try:
+                            response_data = json.loads(result.decode('utf-8'))
+                            if 'choices' in response_data and len(response_data['choices']) > 0:
+                                return response_data['choices'][0]['message']['content']
+                            else:
+                                return "API 응답에서 유효한 응답을 찾을 수 없습니다."
+                        except json.JSONDecodeError as je:
+                            st.error(f"JSON 파싱 오류: {str(je)}")
+                            return "응답 데이터 처리 중 오류가 발생했습니다."
+                except urllib.error.HTTPError as error:
+                    error_info = error.read().decode("utf8", 'ignore')
+                    try:
+                        error_data = json.loads(error_info) if error_info else {}
+                    except json.JSONDecodeError:
+                        error_data = {}
+                    
+                    if error.code == 429:  # Rate limit exceeded
+                        retry_after = float(error.headers.get('retry-after', retry_delay))
+                        error_message = f"요청 한도 초과 - {retry_after}초 후 재시도합니다... (시도 {attempt + 1}/{max_retries})"
+                        st.warning(error_message)
+                        time.sleep(retry_after)
+                        continue
+                    elif error.code == 500 and attempt < max_retries - 1:
+                        error_message = f"서버 오류 발생 - {attempt + 1}번째 시도 실패. {retry_delay}초 후 재시도합니다..."
+                        st.warning(error_message)
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # 지수 백오프
+                        continue
+                    else:
+                        error_message = f"요청 실패 - 상태 코드: {error.code}\n"
+                        if error_data.get('error', {}).get('message'):
+                            error_message += f"오류 메시지: {error_data['error']['message']}\n"
+                        return error_message
+                        
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    error_message = f"오류 발생 - {attempt + 1}번째 시도 실패. {retry_delay}초 후 재시도합니다..."
+                    st.warning(error_message)
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # 지수 백오프
+                    continue
+                return f"오류 발생: {str(e)}"
+        
+        return "최대 재시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."
+        
     except Exception as e:
-        return f"오류 발생: {str(e)}"
+        return f"처리 중 오류가 발생했습니다: {str(e)}"
 
 def main():
     # Page config
-    st.set_page_config(page_title="R&I AI assistance", page_icon="🤖", layout="wide")
+    st.set_page_config(page_title="Startup Investment Analyzer", page_icon="🔍", layout="wide")
     
     # Custom CSS for layout
     st.markdown("""
@@ -148,114 +281,70 @@ def main():
         
         /* Notice and Tip styling */
         .notice-box {
-            background-color: #fff2f0;
+            background-color: #f5f5f5;
             padding: 10px;
             border-radius: 8px;
             margin: 10px auto;
-            border: 1px solid #ffccc7;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            width: 600px;
-        }
-        
-        .tip-box {
-            background-color: #f0f5ff;
-            padding: 10px;
-            border-radius: 8px;
-            margin: 10px auto;
-            border: 1px solid #d6e4ff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            width: 600px;
-        }
-        
-        /* Chat history container */
-        .chat-history-container {
-            flex-grow: 1;
-            overflow-y: auto;
-            margin-bottom: 80px;
-            padding: 20px;
-            background-color: transparent !important;
-        }
-        
-        /* Chat input container */
-        .chat-input-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 70px;
-            padding: 10px;
-            background: transparent;
-            z-index: 1000;
-            width: 600px;
-            margin: 0 auto;
-        }
-        
-        /* Chat input styling */
-        .stChatInput {
-            width: 600px !important;
-            margin: 0 auto;
-        }
-        
-        /* Remove default streamlit styles */
-        .stChatInput > div {
-            background: transparent !important;
-            border: none !important;
-            width: 600px !important;
-        }
-        
-        /* Style the actual input element */
-        .stChatInput input {
-            border: 1px solid #e0e0e0 !important;
-            border-radius: 8px !important;
-            background: white !important;
-            padding: 8px 12px !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-            width: 600px !important;
-        }
-        
-        /* Remove any additional backgrounds */
-        div[data-testid="stChatInput"] {
-            background: transparent !important;
-            width: 600px !important;
-        }
-        
-        /* Message styling */
-        .stChatMessage {
-            background-color: white;
             border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            padding: 15px;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            width: 600px;
         }
         
-        [data-testid="user-message"] {
-            background-color: #e3f2fd !important;
-            border-color: #90caf9;
-        }
-        
-        [data-testid="assistant-message"] {
+        /* Success message styling */
+        .st-success {
             background-color: #f5f5f5 !important;
-            border-color: #e0e0e0;
+            color: #333333 !important;
+            border: 1px solid #e0e0e0 !important;
         }
         
-        /* Sidebar styling */
-        .css-1d391kg {
-            width: 15rem;
-            padding: 2rem 1rem;
+        /* Warning message styling */
+        .st-warning {
+            background-color: #f8f8f8 !important;
+            color: #666666 !important;
+            border: 1px solid #e0e0e0 !important;
         }
         
-        /* Hide unnecessary elements */
-        .stDeployButton, footer {
-            display: none;
+        /* Error message styling */
+        .st-error {
+            background-color: #f0f0f0 !important;
+            color: #333333 !important;
+            border: 1px solid #d0d0d0 !important;
         }
         
-        /* Force transparent background on all containers */
-        .element-container, .stMarkdown, .stChatMessageContent {
-            background-color: transparent !important;
+        /* Chat message styling */
+        .st-chat-message {
+            background-color: #ffffff !important;
+            border: 1px solid #e0e0e0 !important;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        }
+        
+        /* User message styling */
+        [data-testid="user-message"] {
+            background-color: #f8f8f8 !important;
+            border: 1px solid #e0e0e0 !important;
+        }
+        
+        /* Assistant message styling */
+        [data-testid="assistant-message"] {
+            background-color: #ffffff !important;
+            border: 1px solid #e0e0e0 !important;
+        }
+        
+        /* Input field styling */
+        .stTextInput > div > div > input {
+            border: 1px solid #e0e0e0 !important;
+            color: #333333 !important;
+        }
+        
+        /* Button styling */
+        .stButton > button {
+            background-color: #333333 !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+        
+        .stButton > button:hover {
+            background-color: #666666 !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -267,38 +356,30 @@ def main():
     if 'current_tab' not in st.session_state:
         st.session_state.current_tab = "general"
     
-    # Sidebar for API key and query type selection
+    # Sidebar for API keys
     with st.sidebar:
-        st.title("설정")
+        st.title("API 설정")
         
-        # API Key input
+        # Azure API Key input
         if 'api_key' not in st.session_state:
-            api_key = st.text_input("API Key", type="password")
-            if st.button("설정 저장"):
+            api_key = st.text_input("Azure API Key", type="password")
+            if st.button("Azure API 키 저장"):
                 st.session_state.api_key = api_key
                 st.rerun()
-        else:
+                
+        # Crunchbase API Key input
+        if 'crunchbase_api_key' not in st.session_state:
+            crunchbase_api_key = st.text_input("Crunchbase API Key", type="password")
+            if st.button("Crunchbase API 키 저장"):
+                st.session_state.crunchbase_api_key = crunchbase_api_key
+                st.rerun()
+        
+        if 'api_key' in st.session_state and 'crunchbase_api_key' in st.session_state:
             st.success("API 키가 설정되었습니다.")
             if st.button("API 키 재설정"):
                 del st.session_state.api_key
+                del st.session_state.crunchbase_api_key
                 st.rerun()
-        
-        st.markdown("---")  # Divider
-        
-        # Query type selection
-        st.subheader("문의 유형 선택")
-        selected_tab = st.radio("", ["일반 문의", "제품 기획"], key="query_type", 
-                              help="문의 유형을 선택해주세요")
-        
-        if selected_tab == "일반 문의":
-            st.session_state.current_tab = "general"
-        else:
-            st.session_state.current_tab = "product"
-            st.markdown("""
-                <div style='background-color: #fff3e0; padding: 10px; border-radius: 5px; border: 1px solid #ffe0b2;'>
-                ⚠️ 제품기획안 생성만 가능합니다.
-                </div>
-                """, unsafe_allow_html=True)
     
     # Main container
     st.markdown('<div class="main-container">', unsafe_allow_html=True)
@@ -306,16 +387,8 @@ def main():
     # Notice section
     st.markdown("""
         <div class='notice-box'>
-        <h3 style='color: #cf1322; margin-top: 0;'>⚠️ Notice</h3>
-        <p style='color: #cf1322; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    # Tip section
-    st.markdown("""
-        <div class='tip-box'>
-        <h3 style='color: #1890ff; margin-top: 0;'>💡 TIP</h3>
-        <p style='color: #1890ff; margin-bottom: 0;'>질의 전 반드시 왼쪽 설정에서 일반 질문인지 제품기획인지 선택해주세요.</p>
+        <h3 style='color: #333333; margin-top: 0;'>⚠️ Notice</h3>
+        <p style='color: #666666; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.<br>추론 모델을 활용하기 때문에 생성에 5분 정도 걸립니다.</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -328,23 +401,19 @@ def main():
     
     # Chat input container
     st.markdown('<div class="chat-input-container">', unsafe_allow_html=True)
-    if st.session_state.current_tab == "general":
-        placeholder = "일반적인 문의사항에 대해 질문해주세요:"
-    else:
-        placeholder = "제품 기획과 관련된 문의사항에 대해 질문해주세요:"
-    user_input = st.chat_input(placeholder)
+    user_input = st.chat_input("분석하고 싶은 스타트업 이름을 입력하세요:")
     st.markdown('</div>', unsafe_allow_html=True)
     
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Handle chat input
-    if user_input and 'api_key' in st.session_state:
+    if user_input and 'api_key' in st.session_state and 'crunchbase_api_key' in st.session_state:
         try:
             with st.chat_message("user"):
                 st.write(user_input)
             st.session_state.chat_history.append({"role": "user", "content": user_input})
             
-            response = get_ai_response(user_input, st.session_state.api_key, st.session_state.current_tab)
+            response = get_ai_response(user_input, st.session_state.api_key, st.session_state.crunchbase_api_key)
             
             with st.chat_message("assistant"):
                 st.write(response)
@@ -352,8 +421,8 @@ def main():
             
         except Exception as e:
             st.error(f"오류 발생: {str(e)}")
-    elif user_input and 'api_key' not in st.session_state:
-        st.warning("API 키를 먼저 설정해주세요.")
+    elif user_input and ('api_key' not in st.session_state or 'crunchbase_api_key' not in st.session_state):
+        st.warning("Azure API 키와 Crunchbase API 키를 모두 설정해주세요.")
 
 if __name__ == "__main__":
     main()
