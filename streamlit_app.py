@@ -183,15 +183,15 @@ Based on this data, answer the following questions:
                         {"role": "user", "content": combined_input}
                     ],
                     "temperature": 0.7,
-                    "max_tokens": 2000,
-                    "model": "DeepSeek-R1-sqlbu"
+                    "max_tokens": 4000,
+                    "model": "o1-mini"
                 }
                 body = str.encode(json.dumps(data))
                 
                 # Prepare headers
                 headers = {
                     'Content-Type': 'application/json',
-                    'Authorization': f'Bearer {api_key}'
+                    'api-key': api_key
                 }
                 
                 # Create and send request
