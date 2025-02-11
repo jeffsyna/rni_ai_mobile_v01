@@ -36,13 +36,23 @@ def get_ai_response(user_input: str, api_key: str) -> str:
 Please use markdown formatting for tables and lists in your response, and avoid using unnecessary dividers or special characters.
 
 Based on the company name provided, analyze and answer the following questions:  
-
 1. **Business Model & Profitability Analysis**: What is the company's business model, and is it sustainable?  
 2. **Competitive Advantage**: What differentiates this company from its competitors?  
 3. **Market Opportunity**: Considering current market trends and growth potential, can this company scale successfully?  
 4. **Risk Factors**: What are the key risks associated with this company?
-5. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?  
+5. **Funding Details**: {Funding Stage}, {Total Funding Amount}, {Key Investors}  
+6. **Financial Data**: {Revenue Growth Rate}, {Profitability Metrics} (if available)  
+7. **Founders & Team**: {Founder Profiles}, {Key Team Members' Backgrounds}  
+8. **Competitive Landscape**: {List of Competitors}  
+9. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?  
 
+* Optimization Strategies
+    - Specific funding stages (Seed, Series A~D, etc.)
+    - Specific industries (e.g., AI, fintech, healthcare)
+    - Specific regions (e.g., North America, Europe, Asia)
+* Scoring System
+    - Generate an Investment Potential Score (0–100)
+    - Assign different weightings (e.g., Market Growth 30%, Competitive Edge 25%, Profitability 20%)
 *note : always response in Korean"""
                 
                 data = {
