@@ -148,8 +148,8 @@ def get_ai_response(user_input: str, api_key: str, crunchbase_api_key: str) -> s
                 allowSelfSignedHttps(True)
                 
                 # Prepare the request
-                url = 'https://DeepSeek-R1-sqlbu.eastus2.models.ai.azure.com/chat/completions'
-                api_version = '2024-02-15-preview'
+                url = 'https://aisolcopilot7010956395.openai.azure.com/openai/deployments/o1/chat/completions'
+                api_version = '2024-12-01-preview'
                 
                 # Set system message
                 system_message = """You are a professional VC investment analyst. Your task is to evaluate the investment potential of a startup using Crunchbase data.  
