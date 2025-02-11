@@ -5,8 +5,6 @@ import ssl
 import streamlit as st
 import time
 from urllib.error import HTTPError
-import requests
-from typing import Dict, Optional
 
 def allowSelfSignedHttps(allowed):
     """
@@ -15,184 +13,51 @@ def allowSelfSignedHttps(allowed):
     if allowed and not os.environ.get('PYTHONHTTPSVERIFY', '') and getattr(ssl, '_create_unverified_context', None):
         ssl._create_default_https_context = ssl._create_unverified_context
 
-def get_crunchbase_data(company_name: str, crunchbase_api_key: str) -> Optional[Dict]:
+def get_ai_response(user_input: str, api_key: str) -> str:
     """
-    Crunchbase API를 통해 회사 정보를 가져오는 함수
+    Get AI response from the endpoint with retry logic
     """
-    base_url = "https://api.crunchbase.com/api/v4"
-    headers = {
-        "accept": "application/json",
-        "x-cb-user-key": crunchbase_api_key
-    }
-    
-    try:
-        # 회사 검색
-        search_url = f"{base_url}/autocompletes"
-        params = {
-            "query": company_name,
-            "collection_types": "organizations",
-            "limit": 1
-        }
-        
-        response = requests.get(search_url, headers=headers, params=params)
-        response.raise_for_status()
-        search_data = response.json()
-        
-        if not search_data.get("entities"):
-            return None
-            
-        # 회사 UUID 가져오기
-        org_uuid = search_data["entities"][0].get("identifier", {}).get("uuid")
-        if not org_uuid:
-            return None
-            
-        # 상세 정보 조회 (모든 필요한 정보를 한 번에 요청)
-        detail_url = f"{base_url}/entities/organizations/{org_uuid}"
-        params = {
-            "field_ids": [
-                "name", "short_description", "founded_on", "location_identifiers",
-                "funding_total", "operating_status", "categories", "company_type",
-                "revenue_range", "last_funding_type", "num_employees_enum",
-                "website", "linkedin", "twitter", "facebook",
-                "funding_rounds", "funding_rounds.announced_on",
-                "funding_rounds.money_raised", "funding_rounds.investment_type",
-                "funding_rounds.investors", "funding_rounds.investor_identifiers"
-            ]
-        }
-        
-        detail_response = requests.get(detail_url, headers=headers, params=params)
-        detail_response.raise_for_status()
-        company_data = detail_response.json()
-        
-        if not company_data:
-            return None
-            
-        return company_data
-        
-    except requests.exceptions.RequestException as e:
-        st.error(f"Crunchbase API 호출 중 오류 발생: {str(e)}")
-        return None
-
-def format_crunchbase_data(data: Dict) -> str:
-    """
-    Crunchbase API 데이터를 챗봇 시스템 메시지 형식으로 변환
-    """
-    if not data:
-        return "회사 정보를 찾을 수 없습니다."
-    
-    properties = data.get("properties", {})
-    
-    # 펀딩 라운드 정보 처리
-    funding_rounds = properties.get("funding_rounds", [])
-    latest_round = funding_rounds[0] if funding_rounds else {}
-    
-    # 투자자 정보 처리
-    investors = []
-    if latest_round:
-        investors = latest_round.get("investors", [])
-    
-    formatted_data = {
-        "Company Overview": {
-            "Company Name": properties.get("name", "N/A"),
-            "Year Founded": properties.get("founded_on", "N/A"),
-            "Location": properties.get("location_identifiers", [{}])[0].get("value", "N/A") if properties.get("location_identifiers") else "N/A",
-            "Industry": ", ".join([cat.get("value", "") for cat in properties.get("categories", [])]),
-            "Website": properties.get("website", {}).get("value", "N/A"),
-            "Description": properties.get("short_description", "N/A")
-        },
-        "Funding Details": {
-            "Stage": properties.get("last_funding_type", "N/A"),
-            "Total Amount": properties.get("funding_total", {}).get("value_usd", "N/A"),
-            "Latest Round": {
-                "Date": latest_round.get("announced_on", "N/A"),
-                "Type": latest_round.get("investment_type", "N/A"),
-                "Amount": latest_round.get("money_raised", {}).get("value_usd", "N/A")
-            },
-            "Key Investors": [inv.get("name", "") for inv in investors[:5]]
-        },
-        "Financial Data": {
-            "Revenue Range": properties.get("revenue_range", "N/A"),
-            "Employee Count": properties.get("num_employees_enum", "N/A"),
-            "Operating Status": properties.get("operating_status", "N/A")
-        },
-        "Social Media": {
-            "LinkedIn": properties.get("linkedin", {}).get("value", "N/A"),
-            "Twitter": properties.get("twitter", {}).get("value", "N/A"),
-            "Facebook": properties.get("facebook", {}).get("value", "N/A")
-        }
-    }
-    
-    return json.dumps(formatted_data, indent=2, ensure_ascii=False)
-
-def get_ai_response(user_input: str, api_key: str, crunchbase_api_key: str) -> str:
-    """
-    Get AI response from the endpoint with retry logic and Crunchbase data integration
-    """
-    max_retries = 5  # 최대 재시도 횟수 증가
+    max_retries = 5
     retry_delay = 2  # seconds
     
     try:
-        # Crunchbase 데이터 조회
-        company_name = user_input.strip()
-        crunchbase_data = get_crunchbase_data(company_name, crunchbase_api_key)
-        if crunchbase_data is None:
-            return "회사 정보를 찾을 수 없습니다. 회사 이름을 다시 확인해주세요."
-            
-        formatted_data = format_crunchbase_data(crunchbase_data)
-        if formatted_data == "회사 정보를 찾을 수 없습니다.":
-            return formatted_data
-        
         for attempt in range(max_retries):
             try:
                 # Enable SSL bypass
                 allowSelfSignedHttps(True)
                 
                 # Prepare the request
-                url = 'https://aisolcopilot7010956395.openai.azure.com/openai/deployments/o1/chat/completions'
-                api_version = '2024-12-01-preview'
+                url = 'https://DeepSeek-R1-sqlbu.eastus2.models.ai.azure.com/chat/completions'
+                api_version = '2024-02-15-preview'
                 
                 # Set system message
-                system_message = """You are a professional VC investment analyst. Your task is to evaluate the investment potential of a startup using Crunchbase data.  
+                system_message = """You are a professional VC investment analyst. Your task is to evaluate the investment potential of a startup.
 
-Please use markdown formatting for tables and lists in your response, and avoid using unnecessary dividers or special characters.
+Based on the company name provided, analyze and answer the following questions:
 
-Analyze the following information and provide an investment assessment:  
-
-- **Company Overview**: {Company Name}, {Year Founded}, {Headquarters Location}, {Industry}  
-- **Funding Details**: {Funding Stage}, {Total Funding Amount}, {Key Investors}  
-- **Financial Data**: {Revenue Growth Rate}, {Profitability Metrics} (if available)  
-- **Competitive Landscape**: {List of Competitors}  
-- **Founders & Team**: {Founder Profiles}, {Key Team Members' Backgrounds}  
-- **Market Size & Growth Potential**: {Market Growth Rate}, {Key Trends}  
-- **Additional Factors**: {Patent Holdings}, {Partnerships}, {Recent Major News}  
-
-Based on this data, answer the following questions:  
-
-1. **Business Model & Profitability Analysis**: What is the company's business model, and is it sustainable?  
-2. **Competitive Advantage**: What differentiates this company from its competitors?  
-3. **Market Opportunity**: Considering current market trends and growth potential, can this company scale successfully?  
-4. **Risk Factors**: What are the key risks associated with this company? (e.g., legal challenges, profitability concerns, competitive pressure)  
-5. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?  
+1. **Business Model & Profitability Analysis**: What is the company's business model, and is it sustainable?
+2. **Competitive Advantage**: What differentiates this company from its competitors?
+3. **Market Opportunity**: Considering current market trends and growth potential, can this company scale successfully?
+4. **Risk Factors**: What are the key risks associated with this company?
+5. **Investment Suitability**: Is this company attractive for investment at its current stage? Why or why not?
 
 *note : always response in Korean"""
-                
-                # Prepare request data with Crunchbase information
-                combined_input = f"Company: {company_name}\nCrunchbase Data:\n{formatted_data}\n\nUser Query: {user_input}"
                 
                 data = {
                     "messages": [
                         {"role": "system", "content": system_message},
-                        {"role": "user", "content": combined_input}
+                        {"role": "user", "content": user_input}
                     ],
-                    "max_completion_tokens": 4000,
-                    "model": "o1-mini"
+                    "temperature": 0.7,
+                    "max_tokens": 2000,
+                    "model": "DeepSeek-R1-sqlbu"
                 }
                 body = str.encode(json.dumps(data))
                 
                 # Prepare headers
                 headers = {
                     'Content-Type': 'application/json',
-                    'api-key': api_key
+                    'Authorization': f'Bearer {api_key}'
                 }
                 
                 # Create and send request
@@ -357,29 +222,21 @@ def main():
     if 'current_tab' not in st.session_state:
         st.session_state.current_tab = "general"
     
-    # Sidebar for API keys
+    # Sidebar for API key
     with st.sidebar:
         st.title("API 설정")
         
         # Azure API Key input
         if 'api_key' not in st.session_state:
             api_key = st.text_input("Azure API Key", type="password")
-            if st.button("Azure API 키 저장"):
+            if st.button("API 키 저장"):
                 st.session_state.api_key = api_key
                 st.rerun()
-                
-        # Crunchbase API Key input
-        if 'crunchbase_api_key' not in st.session_state:
-            crunchbase_api_key = st.text_input("Crunchbase API Key", type="password")
-            if st.button("Crunchbase API 키 저장"):
-                st.session_state.crunchbase_api_key = crunchbase_api_key
-                st.rerun()
         
-        if 'api_key' in st.session_state and 'crunchbase_api_key' in st.session_state:
+        if 'api_key' in st.session_state:
             st.success("API 키가 설정되었습니다.")
             if st.button("API 키 재설정"):
                 del st.session_state.api_key
-                del st.session_state.crunchbase_api_key
                 st.rerun()
     
     # Main container
@@ -388,8 +245,8 @@ def main():
     # Notice section
     st.markdown("""
         <div class='notice-box'>
-        <h3 style='color: #333333; margin-top: 0;'>⚠️ VC with AI Notice</h3>
-        <p style='color: #666666; margin-bottom: 0;'>등록된 DB 기반으로 최대한 충실하게 답변드리지만 반드시 정확하지는 않습니다.<br>추론 모델을 활용하기 때문에 생성에 5분 내외 시간이 소요 됩니다.</br></p>
+        <h3 style='color: #333333; margin-top: 0;'>⚠️ Notice</h3>
+        <p style='color: #666666; margin-bottom: 0;'>AI 모델을 활용한 추론 기반으로 답변드리기 때문에 생성에 시간이 걸릴 수 있습니다.</p>
         </div>
         """, unsafe_allow_html=True)
     
@@ -408,13 +265,13 @@ def main():
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Handle chat input
-    if user_input and 'api_key' in st.session_state and 'crunchbase_api_key' in st.session_state:
+    if user_input and 'api_key' in st.session_state:
         try:
             with st.chat_message("user"):
                 st.write(user_input)
             st.session_state.chat_history.append({"role": "user", "content": user_input})
             
-            response = get_ai_response(user_input, st.session_state.api_key, st.session_state.crunchbase_api_key)
+            response = get_ai_response(user_input, st.session_state.api_key)
             
             with st.chat_message("assistant"):
                 st.write(response)
@@ -422,8 +279,8 @@ def main():
             
         except Exception as e:
             st.error(f"오류 발생: {str(e)}")
-    elif user_input and ('api_key' not in st.session_state or 'crunchbase_api_key' not in st.session_state):
-        st.warning("Azure API 키와 Crunchbase API 키를 모두 설정해주세요.")
+    elif user_input and 'api_key' not in st.session_state:
+        st.warning("Azure API 키를 설정해주세요.")
 
 if __name__ == "__main__":
     main()
